@@ -1,0 +1,27 @@
+# 1. Données brutes et traitées (Failure mode : Repo bloat & fuite de data)
+data/
+*.csv
+*.parquet
+*.npy
+*.h5
+*.npz
+
+# 2. Poids des modèles (Git ne gère pas les gros binaires)
+models/
+*.pt
+*.pth
+*.pkl
+*.joblib
+
+# 3. Environnements & Secrets (La reproductibilité passe par requirements.txt)
+venv/
+.env/
+.env
+
+# 4. Cache Python & Jupyter (Bruit de versioning)
+__pycache__/
+**/*.pyc
+.ipynb_checkpoints/
+
+.DS_Store
+*.DS_Store
