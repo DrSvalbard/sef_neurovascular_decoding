@@ -36,17 +36,31 @@ fus_data, lfp_dict, events = load_data(path_npz)
 
 # %% --- Data preprocessing ---
 # super pixels
-# Pré-norm
+# Note: Global Z-score normalization applied per channel. 
+# Biological purpose: equalize variance between major blood vessels and capillaries.
+# ML note: Assumes session-level stationarity. For strict causal deployment, a rolling-window Z-score should be implemented to prevent temporal leakage.
 fus_data_norm = (fus_data - np.mean(fus_data,axis=0))/(np.std(fus_data,axis=0)+1e-6)
 T, P = fus_data_norm.shape
 reshaped_fus_data = fus_data_norm[:,:700].reshape(T, 100, 7)
 reshaped_fus_data = np.mean(reshaped_fus_data,axis=2)
-# pca
-pca_fus = data_pca(reshaped_fus_data, 24)
-# normalisation
-pca_fus_norm, lfp_dict_norm = data_normalization(pca_fus, lfp_dict)
 # indexes
-train_idx, test_idx = extract_idx_events(events, pca_fus_norm.shape[0])
+train_idx, test_idx = extract_idx_events(events, reshaped_fus_data.shape[0])
+
+max_train_idx, min_test_idx = np.max(train_idx), np.min(test_idx)
+# verify max < min
+if min_test_idx < max_train_idx:
+    raise ValueError('Min test index < Max train index')
+
+train_fus = reshaped_fus_data[:max_train_idx,:] # -> [T, SuperPixel]
+# pca
+pca_fus = data_pca(train_fus, reshaped_fus_data, 24) # PCA on train_fus, applied to reshaped_fus_data, to avoid temporal leakage
+# normalisation
+train_lfp = dict()
+for idx in lfp_dict:
+    train_lfp[idx] = lfp_dict[idx][:max_train_idx]
+
+pca_fus_norm, lfp_dict_norm = data_normalization(train_fus, train_lfp ,pca_fus, lfp_dict)
+
 # train_dl 
 cut_pca_fus = pca_fus_norm[:,:]
 
